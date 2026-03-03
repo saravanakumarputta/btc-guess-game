@@ -4,7 +4,8 @@ export interface GuessRecord {
   guessId: string;
   direction: "up" | "down";
   entryPrice: number;
-  exitPrice: number;
-  result: "correct" | "incorrect";
-  resolvedAt: number;
+  exitPrice?: number;
+  result?: boolean | "correct" | "incorrect";
+  resolvedAt?: number;
+  status?: "in_progress" | "completed";
 }
