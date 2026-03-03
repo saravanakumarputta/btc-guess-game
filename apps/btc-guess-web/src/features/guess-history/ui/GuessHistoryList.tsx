@@ -18,8 +18,8 @@ export function GuessHistoryList({
   isLoading,
 }: GuessHistoryListProps) {
   return (
-    <Card className="w-full overflow-hidden border-border/80 shadow-md transition-shadow hover:shadow-lg">
-      <CardHeader className="pb-3">
+    <Card className="flex h-full w-full flex-col overflow-hidden border-border/80 shadow-md transition-shadow hover:shadow-lg">
+      <CardHeader className="flex-shrink-0 pb-3">
         <CardTitle className="flex items-center gap-2 text-lg font-semibold">
           <History className="size-5 text-muted-foreground" aria-hidden />
           Guess history
@@ -28,7 +28,7 @@ export function GuessHistoryList({
           Your recent guesses and results
         </p>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="min-h-0 flex-1 overflow-y-auto pt-0">
         {isLoading && (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="size-8 animate-spin text-primary" aria-hidden />

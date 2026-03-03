@@ -14,7 +14,6 @@ export function useGuessGame(playerId: string) {
   const [error, setError] = useState<string | null>(null);
   const [submittedAt, setSubmittedAt] = useState<number | null>(null);
 
-  // Check for active guess on mount / playerId change
   useEffect(() => {
     if (!playerId) return;
 

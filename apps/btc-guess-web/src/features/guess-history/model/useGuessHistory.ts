@@ -7,7 +7,6 @@ export function useGuessHistory(playerId: string | null) {
   useEffect(() => {
     if (!playerId) return;
 
-    // Fetch guesses on mount
     fetchGuesses(playerId);
   }, [playerId, fetchGuesses]);
 
