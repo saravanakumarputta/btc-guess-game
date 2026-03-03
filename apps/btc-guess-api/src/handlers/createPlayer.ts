@@ -21,27 +21,34 @@ export const handler = async (event: any) => {
       );
 
       if (Item) {
-        return ok(Item as PlayerData);
+        return {
+          ...ok(Item as PlayerData),
+          multiValueHeaders: {
+            "Set-Cookie": [
+              `playerId=${existingId}; HttpOnly; Secure; SameSite=Lax; Max-Age=31536000`,
+            ],
+          },
+        };
       }
     }
 
-    const playerId = crypto.randomUUID();
+    const playerId = existingId || crypto.randomUUID();
+    const newPlayerData = {
+      playerId,
+      score: 0,
+      currentGuess: null,
+      createdAt: Date.now(),
+    };
 
     await dynamo.send(
       new PutCommand({
         TableName: PLAYERS_TABLE,
-        Item: {
-          playerId,
-          score: 0,
-          currentGuess: null,
-          createdAt: Date.now(),
-        },
+        Item: newPlayerData,
       }),
     );
 
-    const newPlayer: PlayerData = { playerId, score: 0 };
     return {
-      ...ok(newPlayer),
+      ...ok(newPlayerData),
       multiValueHeaders: {
         "Set-Cookie": [
           `playerId=${playerId}; HttpOnly; Secure; SameSite=Lax; Max-Age=31536000`,
