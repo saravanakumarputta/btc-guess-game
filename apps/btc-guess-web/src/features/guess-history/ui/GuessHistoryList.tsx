@@ -1,37 +1,21 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { GuessRecord } from "../model/types";
 import { ChevronUp, ChevronDown, History, Loader2 } from "lucide-react";
+import { formatPrice } from "@/shared/utils/fomatPrice";
+import { formatTime } from "@/shared/utils/formatTime";
 
 export interface GuessHistoryListProps {
   guesses: GuessRecord[];
-  loading: boolean;
-  error: string | null;
+  isLoading?: boolean;
 }
 
-function formatPrice(n: number) {
-  return n.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
-function formatTime(ms: number) {
-  return new Date(ms).toLocaleString(undefined, {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
-}
-
-/** API can return result as boolean or legacy "correct" | "incorrect" */
-function isCorrect(result: boolean | string | undefined): boolean {
-  if (result === true || result === "correct") return true;
-  return false;
+function isCorrect(result: boolean | undefined): boolean {
+  return result === true;
 }
 
 export function GuessHistoryList({
   guesses,
-  loading,
-  error,
+  isLoading,
 }: GuessHistoryListProps) {
   return (
     <Card className="w-full overflow-hidden border-border/80 shadow-md transition-shadow hover:shadow-lg">
@@ -45,23 +29,17 @@ export function GuessHistoryList({
         </p>
       </CardHeader>
       <CardContent className="pt-0">
-        {error && (
-          <div
-            className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-            role="alert"
-          >
-            {error}
+        {isLoading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="size-8 animate-spin text-primary" aria-hidden />
           </div>
         )}
-        {loading && guesses.length === 0 && (
-          <div className="flex flex-col items-center justify-center gap-2 py-12 text-muted-foreground">
-            <Loader2 className="size-8 animate-spin" aria-hidden />
-            <span className="text-sm">Loading history…</span>
-          </div>
-        )}
-        {!loading && guesses.length === 0 && (
+        {!isLoading && guesses.length === 0 && (
           <div className="rounded-xl border border-dashed border-border bg-muted/20 py-12 text-center">
-            <History className="mx-auto size-10 text-muted-foreground/50" aria-hidden />
+            <History
+              className="mx-auto size-10 text-muted-foreground/50"
+              aria-hidden
+            />
             <p className="mt-2 text-sm font-medium text-muted-foreground">
               No guesses yet
             </p>
@@ -70,7 +48,7 @@ export function GuessHistoryList({
             </p>
           </div>
         )}
-        {guesses.length > 0 && (
+        {!isLoading && guesses.length > 0 && (
           <ul className="flex flex-col gap-2" role="list">
             {guesses.map((g) => {
               const completed =
@@ -86,9 +64,15 @@ export function GuessHistoryList({
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       {g.direction === "up" ? (
-                        <ChevronUp className="size-4 text-emerald-600 dark:text-emerald-400" aria-hidden />
+                        <ChevronUp
+                          className="size-4 text-emerald-600 dark:text-emerald-400"
+                          aria-hidden
+                        />
                       ) : (
-                        <ChevronDown className="size-4 text-red-600 dark:text-red-400" aria-hidden />
+                        <ChevronDown
+                          className="size-4 text-red-600 dark:text-red-400"
+                          aria-hidden
+                        />
                       )}
                       <span className="text-sm font-medium capitalize text-foreground">
                         {g.direction}
