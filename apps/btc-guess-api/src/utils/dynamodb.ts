@@ -1,0 +1,11 @@
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
+
+const client = new DynamoDBClient({
+  region: process.env.AWS_REGION ?? "us-east-1",
+});
+
+export const dynamo = DynamoDBDocumentClient.from(client);
+
+export const PLAYERS_TABLE = process.env.PLAYERS_TABLE!;
+export const GUESSES_TABLE = process.env.GUESSES_TABLE!;
