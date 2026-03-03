@@ -3,7 +3,6 @@ import { useBtcPrice } from "../model/useBtcPrice";
 import { TrendingUp } from "lucide-react";
 
 export interface BtcPriceCardProps {
-  /** Auto-refresh interval in ms; set to 0 to disable. Default 10000. */
   refreshIntervalMs?: number;
 }
 
