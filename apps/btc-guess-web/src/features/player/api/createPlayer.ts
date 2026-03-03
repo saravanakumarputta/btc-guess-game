@@ -1,14 +1,6 @@
 import { post } from "@/shared/api/client";
+import type { PlayerData } from "shared-types";
 
-export interface CreatePlayerResponse {
-  playerId: string;
-  score: number;
-  currentGuess: unknown;
-}
-
-/**
- * Create or get existing player. Call with credentials: 'include' for cookie.
- */
-export async function createPlayer(): Promise<CreatePlayerResponse> {
-  return post<CreatePlayerResponse>("/player", {});
+export async function createPlayer(): Promise<PlayerData> {
+  return post<PlayerData>("/player", {});
 }

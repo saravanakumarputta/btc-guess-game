@@ -1,61 +1,21 @@
-import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { submitGuess } from "../api/submitGuess";
-import { GUESS_COUNTDOWN_MS, type GuessDirection } from "../model/types";
-import { ChevronUp, ChevronDown, Timer } from "lucide-react";
+import { useGuessGame } from "../model/useGuessGame";
+import { ChevronUp, ChevronDown, Timer, Loader2 } from "lucide-react";
 
 export interface GuessGameCardProps {
   playerId: string;
-  /** Called when the 60s countdown finishes (so the parent can refetch guess history). */
-  onCountdownComplete?: () => void;
 }
 
-type Status = "idle" | "counting";
-
-export function GuessGameCard({
-  playerId,
-  onCountdownComplete,
-}: GuessGameCardProps) {
-  const [status, setStatus] = useState<Status>("idle");
-  const [direction, setDirection] = useState<GuessDirection | null>(null);
-  const [timeLeftMs, setTimeLeftMs] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-  const [submittedAt, setSubmittedAt] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (status !== "counting" || submittedAt == null) return;
-    const tick = () => {
-      const elapsed = Date.now() - submittedAt;
-      const left = Math.max(0, GUESS_COUNTDOWN_MS - elapsed);
-      setTimeLeftMs(left);
-      if (left <= 0) {
-        setStatus("idle");
-        setDirection(null);
-        setSubmittedAt(null);
-        onCountdownComplete?.();
-      }
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [status, submittedAt, onCountdownComplete]);
-
-  const handleGuess = async (dir: GuessDirection) => {
-    setError(null);
-    try {
-      const res = await submitGuess(playerId, dir);
-      setDirection(dir);
-      setSubmittedAt(res.timestamp);
-      setStatus("counting");
-      setTimeLeftMs(GUESS_COUNTDOWN_MS);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to submit guess");
-    }
-  };
-
-  const timeLeftSeconds = Math.ceil(timeLeftMs / 1000);
-  const countdownProgress = 1 - timeLeftMs / GUESS_COUNTDOWN_MS;
+export function GuessGameCard({ playerId }: GuessGameCardProps) {
+  const {
+    status,
+    direction,
+    timeLeftSeconds,
+    countdownProgress,
+    error,
+    handleGuess,
+  } = useGuessGame(playerId);
 
   return (
     <Card className="w-full overflow-hidden border-border/80 shadow-md transition-shadow hover:shadow-lg">
@@ -77,30 +37,35 @@ export function GuessGameCard({
           </div>
         )}
 
-        {status === "idle" && (
-          <div className="flex flex-col gap-3">
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => handleGuess("up")}
-                disabled={!playerId}
-              >
-                <ChevronUp className="size-6" aria-hidden />
-                Up
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => handleGuess("down")}
-                disabled={!playerId}
-              >
-                <ChevronDown className="size-6" aria-hidden />
-                Down
-              </Button>
-            </div>
+        {status === "loading" || status === "submitting" ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2
+              className="size-10 animate-spin text-primary"
+              aria-hidden
+            />
           </div>
-        )}
+        ) : status === "idle" ? (
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              variant="default"
+              size="lg"
+              onClick={() => handleGuess("up")}
+              disabled={!playerId}
+            >
+              <ChevronUp className="size-6" aria-hidden />
+              Up
+            </Button>
+            <Button
+              variant="destructive"
+              size="lg"
+              onClick={() => handleGuess("down")}
+              disabled={!playerId}
+            >
+              <ChevronDown className="size-6" aria-hidden />
+              Down
+            </Button>
+          </div>
+        ) : null}
 
         {status === "counting" && (
           <div className="flex flex-col items-center gap-4 rounded-xl border border-border/80 bg-muted/30 py-6">
