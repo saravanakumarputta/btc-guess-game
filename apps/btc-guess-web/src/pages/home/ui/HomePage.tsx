@@ -1,24 +1,43 @@
 import { useEffect } from "react";
-import { Bitcoin, Trophy, Loader2 } from "lucide-react";
+import { Bitcoin, Trophy, Loader2, LogOut, User } from "lucide-react";
 import { BtcPriceCard } from "@/features/btc-price";
 import { GuessGameCard } from "@/features/guess-game";
 import { GuessHistoryList, useGuessHistory } from "@/features/guess-history";
-import { usePlayerId, usePlayerScore } from "@/features/player";
+import {
+  usePlayerId,
+  usePlayerScore,
+  clearStoredPlayerId,
+} from "@/features/player";
+import { useAuth } from "@/features/auth";
+import { Button } from "@/components/ui/button";
 
 export function HomePage() {
+  const { user, signOut } = useAuth();
   const {
     playerId,
+    playerData,
     error: playerError,
     loading: playerLoading,
-  } = usePlayerId();
+  } = usePlayerId({ userId: user?.userId });
   const { guesses, isLoading: guessesLoading } = useGuessHistory(
     playerId ?? null,
   );
+
+  // Only call usePlayerScore when we have playerData from createPlayer
   const {
     score,
     loading: scoreLoading,
     refetch: refetchScore,
-  } = usePlayerScore(playerId);
+  } = usePlayerScore(playerId, playerData);
+
+  const handleSignOut = async () => {
+    try {
+      clearStoredPlayerId();
+      await signOut();
+    } catch (error) {
+      console.error("Sign out error:", error);
+    }
+  };
 
   useEffect(() => {
     const handleGuessResolved = () => refetchScore();
@@ -45,21 +64,45 @@ export function HomePage() {
             </p>
           </div>
 
-          {playerId && (
-            <div className="flex shrink-0 items-center gap-2 rounded-xl border border-border/60 bg-card px-3 py-2 shadow-sm">
-              <Trophy className="size-4 text-amber-500" aria-hidden />
-              <div className="flex flex-col leading-none">
-                <span className="text-[10px] text-muted-foreground">Score</span>
-                <span className="font-mono text-sm font-bold tabular-nums text-foreground">
-                  {scoreLoading ? (
-                    <Loader2 className="size-4 animate-spin" aria-hidden />
-                  ) : (
-                    score
-                  )}
-                </span>
+          <div className="flex shrink-0 items-center gap-2">
+            {playerId && (
+              <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-card px-3 py-2 shadow-sm">
+                <Trophy className="size-4 text-amber-500" aria-hidden />
+                <div className="flex flex-col leading-none">
+                  <span className="text-[10px] text-muted-foreground">
+                    Score
+                  </span>
+                  <span className="font-mono text-sm font-bold tabular-nums text-foreground">
+                    {scoreLoading ? (
+                      <Loader2 className="size-4 animate-spin" aria-hidden />
+                    ) : (
+                      score
+                    )}
+                  </span>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+
+            {user && (
+              <div className="flex items-center gap-2">
+                <div className="hidden sm:flex items-center gap-2 rounded-xl border border-border/60 bg-card px-3 py-2 shadow-sm">
+                  <User className="size-4 text-primary" aria-hidden />
+                  <span className="text-sm text-foreground truncate max-w-[150px]">
+                    {user.email}
+                  </span>
+                </div>
+                <Button
+                  onClick={handleSignOut}
+                  variant="outline"
+                  size="sm"
+                  title="Sign out"
+                >
+                  <LogOut className="size-4" aria-hidden />
+                  <span className="hidden sm:inline">Sign out</span>
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -81,26 +124,21 @@ export function HomePage() {
               aria-hidden
             />
           </div>
-        ) : (
+        ) : playerId && playerData ? (
           <div className="flex flex-1 flex-col gap-6 lg:flex-row h-full">
             {/* Left column: price + game */}
             <section className="flex w-full flex-col gap-4 lg:w-[380px] lg:shrink-0">
               {/**Dont' modify the BtcPriceCard component */}
               <BtcPriceCard refreshIntervalMs={0} />
-              {playerId && <GuessGameCard playerId={playerId} />}
+              <GuessGameCard playerId={playerId} playerData={playerData} />
             </section>
 
             {/* Right column: history — full height with scroll */}
-            {playerId && (
-              <section className="flex h-full flex-1 flex-col">
-                <GuessHistoryList
-                  guesses={guesses}
-                  isLoading={guessesLoading}
-                />
-              </section>
-            )}
+            <section className="flex h-full flex-1 flex-col">
+              <GuessHistoryList guesses={guesses} isLoading={guessesLoading} />
+            </section>
           </div>
-        )}
+        ) : null}
       </main>
     </div>
   );

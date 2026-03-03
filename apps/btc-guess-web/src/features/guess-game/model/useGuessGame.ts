@@ -6,15 +6,44 @@ import { useGuessStore } from "@/features/guess-history";
 
 export type GuessStatus = "idle" | "counting" | "loading" | "submitting";
 
-export function useGuessGame(playerId: string) {
+interface UseGuessGameOptions {
+  initialPlayerData?: PlayerData | null;
+}
+
+export function useGuessGame(playerId: string, options?: UseGuessGameOptions) {
+  const { initialPlayerData } = options || {};
   const { addGuess, startPolling } = useGuessStore();
-  const [status, setStatus] = useState<GuessStatus>("loading");
+  const [status, setStatus] = useState<GuessStatus>(() =>
+    initialPlayerData ? "idle" : "loading",
+  );
   const [direction, setDirection] = useState<GuessDirection | null>(null);
   const [timeLeftMs, setTimeLeftMs] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [submittedAt, setSubmittedAt] = useState<number | null>(null);
 
   useEffect(() => {
+    // If we have initial player data, check for current guess immediately
+    if (initialPlayerData !== undefined) {
+      if (initialPlayerData?.currentGuess) {
+        const { timestamp, direction: dir } = initialPlayerData.currentGuess;
+        const elapsed = Date.now() - timestamp;
+        const remaining = GUESS_COUNTDOWN_MS - elapsed;
+
+        if (remaining > 0) {
+          setDirection(dir);
+          setSubmittedAt(timestamp);
+          setTimeLeftMs(remaining);
+          setStatus("counting");
+        } else {
+          setStatus("idle");
+        }
+      } else {
+        setStatus("idle");
+      }
+      return;
+    }
+
+    // Only fetch if we have a playerId and no initial data
     if (!playerId) return;
 
     let cancelled = false;
@@ -50,7 +79,7 @@ export function useGuessGame(playerId: string) {
     return () => {
       cancelled = true;
     };
-  }, [playerId]);
+  }, [playerId, initialPlayerData]);
 
   // Countdown timer
   useEffect(() => {

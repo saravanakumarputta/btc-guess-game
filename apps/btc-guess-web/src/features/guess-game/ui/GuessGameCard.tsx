@@ -2,12 +2,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useGuessGame } from "../model/useGuessGame";
 import { ChevronUp, ChevronDown, Timer, Loader2 } from "lucide-react";
+import type { PlayerData } from "@/features/player";
 
 export interface GuessGameCardProps {
   playerId: string;
+  playerData?: PlayerData | null;
 }
 
-export function GuessGameCard({ playerId }: GuessGameCardProps) {
+export function GuessGameCard({
+  playerId,
+  playerData = undefined,
+}: GuessGameCardProps) {
   const {
     status,
     direction,
@@ -15,7 +20,7 @@ export function GuessGameCard({ playerId }: GuessGameCardProps) {
     countdownProgress,
     error,
     handleGuess,
-  } = useGuessGame(playerId);
+  } = useGuessGame(playerId, { initialPlayerData: playerData });
 
   return (
     <Card className="w-full overflow-hidden border-border/80 shadow-md transition-shadow hover:shadow-lg">
