@@ -1,159 +1,240 @@
-# Turborepo starter
+# BTC Guess Game
 
-This Turborepo starter is maintained by the Turborepo core team.
+A real-time Bitcoin price prediction game built with React, TypeScript, and AWS services. Users authenticate with AWS Cognito and compete by guessing whether Bitcoin's price will go up or down in the next 60 seconds.
 
-## Using this example
+## 🏗️ Project Structure
 
-Run the following command:
+This is a monorepo managed with Turborepo and pnpm workspaces, following **Feature-Sliced Design (FSD)** architecture principles.
 
-```sh
-npx create-turbo@latest
+```
+├── apps/
+│   ├── btc-guess-web/          # React frontend application
+│   │   └── src/
+│   │       ├── features/        # Feature-sliced modules
+│   │       │   ├── auth/        # AWS Cognito authentication
+│   │       │   │   ├── api/     # Auth API calls (Amplify)
+│   │       │   │   ├── config/  # Cognito configuration
+│   │       │   │   ├── model/   # Auth state & context
+│   │       │   │   ├── ui/      # Auth UI components
+│   │       │   │   └── index.ts # Public exports
+│   │       │   ├── btc-price/   # Bitcoin price display
+│   │       │   ├── guess-game/  # Game mechanics
+│   │       │   ├── guess-history/# Game history
+│   │       │   └── player/      # Player management
+│   │       ├── pages/           # Page components
+│   │       ├── shared/          # Shared utilities
+│   │       └── components/      # Reusable UI (shadcn)
+│   │
+│   └── btc-guess-api/           # AWS Lambda backend
+│       └── src/
+│           ├── handlers/        # Lambda function handlers
+│           │   ├── createPlayer.ts
+│           │   ├── getPlayer.ts
+│           │   ├── submitGuess.ts
+│           │   ├── resolveGuess.ts
+│           │   ├── getGuesses.ts
+│           │   └── getBTCPrice.ts
+│           └── utils/           # Shared utilities
+│
+└── packages/
+    └── shared-types/            # Shared TypeScript types
 ```
 
-## What's inside?
+## 🎯 Feature-Sliced Design Architecture
 
-This Turborepo includes the following packages/apps:
+Each feature is organized as a self-contained module with clear responsibilities:
 
-### Apps and Packages
+### Feature Structure
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo build
+```
+feature/
+├── api/          # API calls and external data fetching
+├── config/       # Feature-specific configuration
+├── model/        # Business logic, state management, hooks
+├── ui/           # React components
+└── index.ts      # Public API (exports only what's needed)
 ```
 
-Without global `turbo`, use your package manager:
+### Key Features
 
-```sh
-cd my-turborepo
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+#### 🔐 Authentication (`features/auth/`)
+
+- **AWS Cognito** integration using AWS Amplify v6
+- Email/password authentication with verification
+- JWT-based session management
+- Protected routes
+- Cross-device session sync using Cognito user ID
+
+#### 🎮 Game (`features/guess-game/`)
+
+- Real-time countdown timer
+- Submit "up" or "down" predictions
+- Handles active guess state
+- Resume countdown on page refresh
+
+#### 📊 Player (`features/player/`)
+
+- **Optimized player management**
+- Cognito userId → playerId mapping
+- Single API call on load (`createPlayer` returns full data)
+- Score tracking and persistence
+
+#### 📈 BTC Price (`features/btc-price/`)
+
+- Live Bitcoin price display
+- Polling mechanism for updates
+
+#### 📜 History (`features/guess-history/`)
+
+- Game history tracking
+- Result visualization
+- Real-time updates via polling
+
+## 🛠️ Tech Stack
+
+### Frontend
+
+- **React 19** - UI framework
+- **TypeScript** - Type safety
+- **Vite** - Build tool
+- **AWS Amplify v6** - Cognito authentication
+- **Zustand** - State management
+- **Tailwind CSS v4** - Styling
+- **shadcn/ui** - UI components
+- **Lucide React** - Icons
+
+### Backend
+
+- **AWS Lambda** - Serverless functions
+- **AWS DynamoDB** - Database
+- **AWS Step Functions** - 60s delay orchestration
+- **AWS API Gateway** - REST API
+- **Serverless Framework** - Infrastructure as Code
+
+### Shared
+
+- **Turborepo** - Monorepo management
+- **pnpm** - Package manager
+- **TypeScript** - Shared types package
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 20+
+- pnpm 8+
+- AWS Account (for Cognito setup)
+
+### Installation
+
+```bash
+# Install dependencies
+pnpm install
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+### Environment Setup
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+Both applications require environment variables to be configured before running.
 
-```sh
-turbo build --filter=docs
+#### Backend API (`apps/btc-guess-api/`)
+
+Create a `.env` file in `apps/btc-guess-api/` based on `.env.example`:
+
+```bash
+# AWS Credentials (for local development and deployment)
+AWS_ACCESS_KEY_ID=your-access-key-id
+AWS_SECRET_ACCESS_KEY=your-secret-access-key
+
+# CoinGecko API Key (optional - free tier available)
+# Sign up at https://www.coingecko.com/en/api
+# Free tier: 10,000 requests/month
+COINGECKO_API_KEY=your-coingecko-api-key
 ```
 
-Without global `turbo`:
+**Setup Instructions:**
 
-```sh
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
+1. Get AWS credentials from your AWS IAM console
+2. (Optional) Sign up for a CoinGecko API key at [https://www.coingecko.com/en/api](https://www.coingecko.com/en/api)
+3. Copy `.env.example` to `.env` and fill in your values
+
+#### Frontend Web App (`apps/btc-guess-web/`)
+
+Create a `.env` file in `apps/btc-guess-web/` based on `.env.example`:
+
+```bash
+# API Base URL (from backend deployment)
+# Use API Gateway URL: https://xxxxx.execute-api.region.amazonaws.com/stage
+# Or custom domain: https://api.yourdomain.com
+VITE_API_BASE_URL=https://your-api-gateway-url.execute-api.us-east-1.amazonaws.com/dev
+
+# AWS Cognito Configuration
+# Get these values from your AWS Cognito User Pool
+VITE_COGNITO_USER_POOL_ID=your-user-pool-id
+VITE_COGNITO_CLIENT_ID=your-client-id
 ```
 
-### Develop
+**Setup Instructions:**
 
-To develop all apps and packages, run the following command:
+1. Deploy the backend API first to get the API Gateway URL
+2. Create an AWS Cognito User Pool in AWS Console
+3. Get the User Pool ID and Client ID from Cognito
+4. Copy `.env.example` to `.env` and fill in your values
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+**Note:** All frontend environment variables must be prefixed with `VITE_` to be accessible in the Vite application.
 
-```sh
-cd my-turborepo
-turbo dev
+### Running the Application
+
+#### Backend Deployment
+
+The backend **must be deployed to AWS** for local testing as it relies on:
+
+- AWS Lambda functions for API endpoints
+- AWS Step Functions for the 60-second guess resolution delay
+- AWS DynamoDB for data persistence
+
+There is no local emulation. Deploy the backend first using the Serverless Framework:
+
+```bash
+cd apps/btc-guess-api
+pnpm deploy:dev or pnpm deploy:prod
 ```
 
-Without global `turbo`, use your package manager:
+After deployment, copy the API Gateway URL from the output and add it to your frontend `.env` file.
 
-```sh
-cd my-turborepo
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
+#### Frontend Development
+
+Once the backend is deployed and your `.env` file is configured with actual values, start the frontend development server:
+
+```bash
+# From the frontend directory
+cd apps/btc-guess-web
+pnpm dev
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+The frontend will be available at `http://localhost:5173` and will connect to your deployed AWS backend.
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+#### Frontend Deployment
 
-```sh
-turbo dev --filter=web
+To build the frontend for production deployment:
+
+```bash
+# From the frontend directory
+cd apps/btc-guess-web
+pnpm build
 ```
 
-Without global `turbo`:
+This will create optimized production files in the `dist/` folder. The built files can be deployed to any static hosting service:
 
-```sh
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
+- **AWS S3 + CloudFront** - Static website hosting with CDN
+- **Vercel** - Zero-config deployment
+- **Netlify** - Drag-and-drop or CLI deployment
+- **AWS Amplify** - Full-stack deployment
+- **Any static hosting service** - Just upload the `dist/` folder contents
+
+**Example deployment to S3:**
+
+```bash
+aws s3 sync dist/ s3://your-bucket-name --delete
+aws cloudfront create-invalidation --distribution-id YOUR_DIST_ID --paths "/*"
 ```
 
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
