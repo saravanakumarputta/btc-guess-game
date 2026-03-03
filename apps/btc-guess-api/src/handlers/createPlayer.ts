@@ -1,4 +1,5 @@
 import { PutCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
+import type { PlayerData } from "shared-types";
 import { dynamo, PLAYERS_TABLE } from "../utils/dynamodb";
 import { ok, serverError } from "../utils/response";
 
@@ -20,7 +21,7 @@ export const handler = async (event: any) => {
       );
 
       if (Item) {
-        return ok({ ...Item });
+        return ok(Item as PlayerData);
       }
     }
 
@@ -38,8 +39,9 @@ export const handler = async (event: any) => {
       }),
     );
 
+    const newPlayer: PlayerData = { playerId, score: 0 };
     return {
-      ...ok({ playerId, score: 0, currentGuess: null }),
+      ...ok(newPlayer),
       multiValueHeaders: {
         "Set-Cookie": [
           `playerId=${playerId}; HttpOnly; Secure; SameSite=Lax; Max-Age=31536000`,

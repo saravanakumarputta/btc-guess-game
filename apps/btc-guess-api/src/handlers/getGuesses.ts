@@ -1,4 +1,5 @@
 import { QueryCommand } from "@aws-sdk/lib-dynamodb";
+import type { GuessRecord } from "shared-types";
 import { dynamo, GUESSES_TABLE } from "../utils/dynamodb";
 import { ok, badRequest, serverError } from "../utils/response";
 
@@ -19,7 +20,7 @@ export const handler = async (event: any) => {
       }),
     );
 
-    return ok(Items ?? []);
+    return ok((Items ?? []) as GuessRecord[]);
   } catch (error) {
     console.error("getGuesses error:", error);
     return serverError("Failed to get guesses");

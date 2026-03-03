@@ -1,4 +1,5 @@
 import { GetCommand } from "@aws-sdk/lib-dynamodb";
+import type { PlayerData } from "shared-types";
 import { dynamo, PLAYERS_TABLE } from "../utils/dynamodb";
 import { ok, badRequest, serverError } from "../utils/response";
 
@@ -21,7 +22,7 @@ export const handler = async (event: any) => {
       return badRequest("Player not found");
     }
 
-    return ok(Item);
+    return ok(Item as PlayerData);
   } catch (error) {
     console.error("getPlayer error:", error);
     return serverError("Failed to get player");

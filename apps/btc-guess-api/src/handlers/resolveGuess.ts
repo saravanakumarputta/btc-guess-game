@@ -1,4 +1,5 @@
 import { GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import type { GuessDirection } from "shared-types";
 import { dynamo, PLAYERS_TABLE, GUESSES_TABLE } from "../utils/dynamodb";
 import { fetchBTCPrice } from "../utils/btcPrice";
 import { ok, badRequest, serverError } from "../utils/response";
@@ -45,7 +46,7 @@ export const handler = async (event: any) => {
 
     const btcPrice = await fetchBTCPrice();
     const exitPrice = btcPrice.usd;
-    const { direction } = player.currentGuess;
+    const direction = player.currentGuess.direction as GuessDirection;
     const actualEntryPrice = entryPrice || player.currentGuess.entryPrice;
 
     // Check if price hasn't moved (for Step Function retry logic)

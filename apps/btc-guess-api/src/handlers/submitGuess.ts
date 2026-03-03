@@ -1,5 +1,6 @@
 import { GetCommand, UpdateCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { SFNClient, StartExecutionCommand } from "@aws-sdk/client-sfn";
+import type { GuessDirection, SubmitGuessResponse } from "shared-types";
 
 import { dynamo, PLAYERS_TABLE, GUESSES_TABLE } from "../utils/dynamodb";
 import { fetchBTCPrice } from "../utils/btcPrice";
@@ -15,7 +16,7 @@ export const handler = async (event: any) => {
       return badRequest("playerId and direction are required");
     }
 
-    if (!["up", "down"].includes(direction)) {
+    if (!["up", "down"].includes(direction as string)) {
       return badRequest("direction must be up or down");
     }
 
@@ -87,10 +88,10 @@ export const handler = async (event: any) => {
       }),
     );
 
-    const response: Record<string, unknown> = {
+    const response: SubmitGuessResponse = {
       playerId,
       guessId,
-      direction,
+      direction: direction as GuessDirection,
       entryPrice,
       timestamp,
     };

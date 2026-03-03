@@ -40,9 +40,3 @@ submitGuess:
 
 resolveGuess:
   handler: src/handlers/resolveGuess.handler
-  events:
-    # Dev-only: trigger resolution manually when running offline (no EventBridge)
-    - http:
-        path: /resolve-now
-        method: POST
-        cors: true
