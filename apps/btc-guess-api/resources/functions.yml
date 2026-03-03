@@ -22,6 +22,14 @@ getPlayer:
         method: GET
         cors: true
 
+getGuesses:
+  handler: src/handlers/getGuesses.handler
+  events:
+    - http:
+        path: /player/{id}/guesses
+        method: GET
+        cors: true
+
 submitGuess:
   handler: src/handlers/submitGuess.handler
   events:

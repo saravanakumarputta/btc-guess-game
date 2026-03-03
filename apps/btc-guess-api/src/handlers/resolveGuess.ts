@@ -1,4 +1,4 @@
-import { GetCommand, UpdateCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { dynamo, PLAYERS_TABLE, GUESSES_TABLE } from "../utils/dynamodb";
 import { fetchBTCPrice } from "../utils/btcPrice";
 import { ok, badRequest, serverError } from "../utils/response";
@@ -38,17 +38,37 @@ export const handler = async (event: any) => {
       return isHttp ? badRequest("Guess ID mismatch") : undefined;
     }
 
-    const exitPrice = await fetchBTCPrice();
+    const btcPrice = await fetchBTCPrice();
+    const exitPrice = btcPrice.usd;
     const { direction, entryPrice } = player.currentGuess;
 
+    // direction "up" = correct when exitPrice > entryPrice; "down" = correct when exitPrice < entryPrice
     const correct =
       direction === "up" ? exitPrice > entryPrice : exitPrice < entryPrice;
-
-    const result = correct ? "correct" : "incorrect";
     const scoreDelta = correct ? 1 : -1;
     const resolvedAt = Date.now();
 
-    // Update player score and clear current guess
+    // Update the same guess record: result (true/false), status completed, exitPrice
+    await dynamo.send(
+      new UpdateCommand({
+        TableName: GUESSES_TABLE,
+        Key: { playerId, timestamp },
+        UpdateExpression:
+          "SET exitPrice = :exitPrice, #result = :result, #status = :status, resolvedAt = :resolvedAt",
+        ExpressionAttributeNames: {
+          "#result": "result",
+          "#status": "status",
+        },
+        ExpressionAttributeValues: {
+          ":exitPrice": exitPrice,
+          ":result": correct,
+          ":status": "completed",
+          ":resolvedAt": resolvedAt,
+        },
+      }),
+    );
+
+    // Update player: score +1 or -1, clear currentGuess, set lastGuess
     await dynamo.send(
       new UpdateCommand({
         TableName: PLAYERS_TABLE,
@@ -66,31 +86,15 @@ export const handler = async (event: any) => {
             direction,
             entryPrice,
             exitPrice,
-            result,
+            result: correct,
             resolvedAt,
           },
         },
       }),
     );
 
-    await dynamo.send(
-      new PutCommand({
-        TableName: GUESSES_TABLE,
-        Item: {
-          playerId,
-          timestamp,
-          guessId,
-          direction,
-          entryPrice,
-          exitPrice,
-          result,
-          resolvedAt,
-        },
-      }),
-    );
-
-    console.log(`Resolved guess for ${playerId}: ${result}`);
-    return isHttp ? ok({ resolved: true, result }) : undefined;
+    console.log(`Resolved guess for ${playerId}: ${correct ? "correct" : "incorrect"}`);
+    return isHttp ? ok({ resolved: true, result: correct }) : undefined;
   } catch (error) {
     console.error("resolveGuess error:", error);
     if (isHttp) return serverError("Failed to resolve guess");

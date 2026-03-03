@@ -1,10 +1,10 @@
-import { GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { GetCommand, UpdateCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import {
   SchedulerClient,
   CreateScheduleCommand,
 } from "@aws-sdk/client-scheduler";
 
-import { dynamo, PLAYERS_TABLE } from "../utils/dynamodb";
+import { dynamo, PLAYERS_TABLE, GUESSES_TABLE } from "../utils/dynamodb";
 import { fetchBTCPrice } from "../utils/btcPrice";
 import { ok, badRequest, serverError } from "../utils/response";
 
@@ -37,7 +37,8 @@ export const handler = async (event: any) => {
       return badRequest("You already have an active guess");
     }
 
-    const entryPrice = await fetchBTCPrice();
+    const btcPrice = await fetchBTCPrice();
+    const entryPrice = btcPrice.usd;
     const timestamp = Date.now();
     const guessId = crypto.randomUUID();
 
@@ -53,6 +54,21 @@ export const handler = async (event: any) => {
             entryPrice,
             timestamp,
           },
+        },
+      }),
+    );
+
+    // Create guess record in guesses table (status in_progress; same record updated on resolve)
+    await dynamo.send(
+      new PutCommand({
+        TableName: GUESSES_TABLE,
+        Item: {
+          playerId,
+          timestamp,
+          guessId,
+          direction,
+          entryPrice,
+          status: "in_progress",
         },
       }),
     );

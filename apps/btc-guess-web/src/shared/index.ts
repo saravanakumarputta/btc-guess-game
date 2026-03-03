@@ -1,2 +1,2 @@
 export { config } from "./config";
-export { get } from "./api/client";
+export { get, post } from "./api/client";
