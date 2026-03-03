@@ -4,8 +4,9 @@ import { fetchBTCPrice } from "../utils/btcPrice";
 import { ok, badRequest, serverError } from "../utils/response";
 
 export const handler = async (event: any) => {
+  // Step Functions pass input directly; HTTP passes via body
   const payload = event.body ? JSON.parse(event.body) : event;
-  const { playerId, guessId, timestamp } = payload;
+  const { playerId, guessId, timestamp, entryPrice } = payload;
   const isHttp = !!event.body;
 
   try {
@@ -18,7 +19,7 @@ export const handler = async (event: any) => {
       console.log("Too early to resolve");
       return isHttp
         ? badRequest("Too early to resolve (wait 60s after submitting guess)")
-        : undefined;
+        : { priceUnchanged: false, error: "Too early" };
     }
 
     const { Item: player } = await dynamo.send(
@@ -30,21 +31,36 @@ export const handler = async (event: any) => {
 
     if (!player || !player.currentGuess) {
       console.log("No active guess found");
-      return isHttp ? badRequest("No active guess found") : undefined;
+      return isHttp
+        ? badRequest("No active guess found")
+        : { priceUnchanged: false, error: "No active guess" };
     }
 
     if (player.currentGuess.guessId !== guessId) {
       console.log("Guess ID mismatch");
-      return isHttp ? badRequest("Guess ID mismatch") : undefined;
+      return isHttp
+        ? badRequest("Guess ID mismatch")
+        : { priceUnchanged: false, error: "Guess ID mismatch" };
     }
 
     const btcPrice = await fetchBTCPrice();
     const exitPrice = btcPrice.usd;
-    const { direction, entryPrice } = player.currentGuess;
+    const { direction } = player.currentGuess;
+    const actualEntryPrice = entryPrice || player.currentGuess.entryPrice;
+
+    // Check if price hasn't moved (for Step Function retry logic)
+    const priceUnchanged = Math.abs(exitPrice - actualEntryPrice) < 0.01;
+
+    if (priceUnchanged && !isHttp) {
+      console.log("Price unchanged, will retry");
+      return { priceUnchanged: true };
+    }
 
     // direction "up" = correct when exitPrice > entryPrice; "down" = correct when exitPrice < entryPrice
     const correct =
-      direction === "up" ? exitPrice > entryPrice : exitPrice < entryPrice;
+      direction === "up"
+        ? exitPrice > actualEntryPrice
+        : exitPrice < actualEntryPrice;
     const scoreDelta = correct ? 1 : -1;
     const resolvedAt = Date.now();
 
@@ -84,7 +100,7 @@ export const handler = async (event: any) => {
           ":lastGuess": {
             guessId,
             direction,
-            entryPrice,
+            entryPrice: actualEntryPrice,
             exitPrice,
             result: correct,
             resolvedAt,
@@ -93,8 +109,17 @@ export const handler = async (event: any) => {
       }),
     );
 
-    console.log(`Resolved guess for ${playerId}: ${correct ? "correct" : "incorrect"}`);
-    return isHttp ? ok({ resolved: true, result: correct }) : undefined;
+    console.log(
+      `Resolved guess for ${playerId}: ${correct ? "correct" : "incorrect"}`,
+    );
+
+    // Return appropriate response based on caller
+    if (isHttp) {
+      return ok({ resolved: true, result: correct });
+    } else {
+      // Step Functions response
+      return { priceUnchanged: false, resolved: true, result: correct };
+    }
   } catch (error) {
     console.error("resolveGuess error:", error);
     if (isHttp) return serverError("Failed to resolve guess");

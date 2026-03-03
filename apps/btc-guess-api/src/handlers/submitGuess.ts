@@ -1,14 +1,11 @@
 import { GetCommand, UpdateCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
-import {
-  SchedulerClient,
-  CreateScheduleCommand,
-} from "@aws-sdk/client-scheduler";
+import { SFNClient, StartExecutionCommand } from "@aws-sdk/client-sfn";
 
 import { dynamo, PLAYERS_TABLE, GUESSES_TABLE } from "../utils/dynamodb";
 import { fetchBTCPrice } from "../utils/btcPrice";
 import { ok, badRequest, serverError } from "../utils/response";
 
-const scheduler = new SchedulerClient({ region: "us-east-1" });
+const sfnClient = new SFNClient({ region: "us-east-1" });
 
 export const handler = async (event: any) => {
   try {
@@ -58,7 +55,7 @@ export const handler = async (event: any) => {
       }),
     );
 
-    // Create guess record in guesses table (status in_progress; same record updated on resolve)
+    // Create guess record in guesses table (status in_progress)
     await dynamo.send(
       new PutCommand({
         TableName: GUESSES_TABLE,
@@ -73,21 +70,20 @@ export const handler = async (event: any) => {
       }),
     );
 
-    const resolveAt = timestamp + 60000;
+    // Start Step Function execution (waits 60s then resolves)
+    const stateMachineArn = process.env.STATE_MACHINE_ARN!;
+    const executionName = `resolve-${playerId}-${timestamp}`;
 
-    const scheduleName = `resolve-${playerId}-${timestamp}`;
-    await scheduler.send(
-      new CreateScheduleCommand({
-        Name: scheduleName,
-        GroupName: process.env.SCHEDULER_GROUP!,
-        ScheduleExpression: `at(${new Date(resolveAt).toISOString().split(".")[0]})`,
-        FlexibleTimeWindow: { Mode: "OFF" },
-        Target: {
-          Arn: process.env.RESOLVE_GUESS_LAMBDA_ARN!,
-          RoleArn: process.env.SCHEDULER_ROLE_ARN!,
-          Input: JSON.stringify({ playerId, guessId, timestamp }),
-        },
-        ActionAfterCompletion: "DELETE",
+    await sfnClient.send(
+      new StartExecutionCommand({
+        stateMachineArn,
+        name: executionName,
+        input: JSON.stringify({
+          playerId,
+          guessId,
+          timestamp,
+          entryPrice,
+        }),
       }),
     );
 

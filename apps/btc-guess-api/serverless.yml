@@ -9,9 +9,7 @@ provider:
   environment:
     PLAYERS_TABLE: ${self:service}-players-${sls:stage}
     GUESSES_TABLE: ${self:service}-guesses-${sls:stage}
-    RESOLVE_GUESS_LAMBDA_ARN: arn:aws:lambda:${aws:region}:${aws:accountId}:function:${self:service}-${sls:stage}-resolveGuess
-    SCHEDULER_ROLE_ARN: arn:aws:iam::${aws:accountId}:role/${self:service}-scheduler-role-${sls:stage}
-    SCHEDULER_GROUP: ${self:service}-${sls:stage}-group
+    STATE_MACHINE_ARN: arn:aws:states:${aws:region}:${aws:accountId}:stateMachine:${self:service}-${sls:stage}-resolve-guess
     COINGECKO_API_KEY: ${env:COINGECKO_API_KEY}
   iam:
     role:
@@ -28,15 +26,66 @@ provider:
             - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.GUESSES_TABLE}
         - Effect: Allow
           Action:
-            - scheduler:CreateSchedule
-            - scheduler:DeleteSchedule
-          Resource: "*"
-        - Effect: Allow
-          Action:
-            - iam:PassRole
-          Resource: arn:aws:iam::${aws:accountId}:role/${self:service}-scheduler-role-${sls:stage}
+            - states:StartExecution
+          Resource:
+            - ${self:provider.environment.STATE_MACHINE_ARN}
 
 functions: ${file(resources/functions.yml)}
+
+stepFunctions:
+  stateMachines:
+    ResolveGuessStateMachine:
+      id: ResolveGuessStateMachine
+      name: ${self:service}-${sls:stage}-resolve-guess
+      definition:
+        Comment: "Waits 60s then resolves a BTC price guess. Retries if price hasn't moved."
+        StartAt: Wait60Seconds
+        States:
+          Wait60Seconds:
+            Type: Wait
+            Seconds: 60
+            Next: FetchPriceAndResolve
+
+          FetchPriceAndResolve:
+            Type: Task
+            Resource: arn:aws:lambda:${aws:region}:${aws:accountId}:function:${self:service}-${sls:stage}-resolveGuess
+            ResultPath: "$.resolveResult"
+            Retry:
+              - ErrorEquals:
+                  - Lambda.ServiceException
+                  - Lambda.AWSLambdaException
+                  - Lambda.SdkClientException
+                  - Lambda.TooManyRequestsException
+                IntervalSeconds: 2
+                MaxAttempts: 3
+                BackoffRate: 2
+            Catch:
+              - ErrorEquals:
+                  - States.ALL
+                ResultPath: "$.error"
+                Next: Failed
+            Next: DidPriceMove
+
+          DidPriceMove:
+            Type: Choice
+            Choices:
+              - Variable: "$.resolveResult.priceUnchanged"
+                BooleanEquals: true
+                Next: WaitForPriceChange
+            Default: Resolved
+
+          WaitForPriceChange:
+            Type: Wait
+            Seconds: 5
+            Next: FetchPriceAndResolve
+
+          Resolved:
+            Type: Succeed
+
+          Failed:
+            Type: Fail
+            Error: "ResolutionFailed"
+            Cause: "Lambda failed after retries"
 
 resources:
   Resources:
@@ -68,33 +117,9 @@ resources:
           - AttributeName: timestamp
             KeyType: RANGE
 
-    SchedulerRole:
-      Type: AWS::IAM::Role
-      Properties:
-        RoleName: ${self:service}-scheduler-role-${sls:stage}
-        AssumeRolePolicyDocument:
-          Version: "2012-10-17"
-          Statement:
-            - Effect: Allow
-              Principal:
-                Service: scheduler.amazonaws.com
-              Action: sts:AssumeRole
-        Policies:
-          - PolicyName: InvokeResolveGuessLambda
-            PolicyDocument:
-              Version: "2012-10-17"
-              Statement:
-                - Effect: Allow
-                  Action: lambda:InvokeFunction
-                  Resource: arn:aws:lambda:${aws:region}:${aws:accountId}:function:${self:service}-${sls:stage}-resolveGuess
-
-    SchedulerGroup:
-      Type: AWS::Scheduler::ScheduleGroup
-      Properties:
-        Name: ${self:service}-${sls:stage}-group
-
 plugins:
   - serverless-esbuild
+  - serverless-step-functions
 
 custom:
   esbuild:
