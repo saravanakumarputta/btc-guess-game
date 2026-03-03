@@ -129,7 +129,7 @@ export function HomePage() {
             {/* Left column: price + game */}
             <section className="flex w-full flex-col gap-4 lg:w-[380px] lg:shrink-0">
               {/**Dont' modify the BtcPriceCard component */}
-              <BtcPriceCard refreshIntervalMs={0} />
+              <BtcPriceCard />
               <GuessGameCard playerId={playerId} playerData={playerData} />
             </section>
 

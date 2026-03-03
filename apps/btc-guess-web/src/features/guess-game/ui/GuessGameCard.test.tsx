@@ -195,6 +195,7 @@ describe("GuessGameCard", () => {
       correctGuesses: 5,
       incorrectGuesses: 2,
       totalGuesses: 7,
+      score: 5,
     };
 
     render(<GuessGameCard playerId="player123" playerData={playerData} />);
