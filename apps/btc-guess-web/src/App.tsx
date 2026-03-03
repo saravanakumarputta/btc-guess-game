@@ -1,11 +1,11 @@
 import "./App.css";
-import { Button } from "./components/ui/button";
+import { BtcPriceCard } from "@/features/btc-price";
 
 function App() {
   return (
-    <>
-      <Button>Click Me</Button>
-    </>
+    <main className="flex min-h-screen flex-col p-6">
+      <BtcPriceCard />
+    </main>
   );
 }
 
