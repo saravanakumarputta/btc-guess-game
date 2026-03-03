@@ -1,0 +1,40 @@
+getBtcPrice:
+  handler: src/handlers/getBTCPrice.handler
+  events:
+    - http:
+        path: /btc-price
+        method: GET
+        cors: true
+
+createPlayer:
+  handler: src/handlers/createPlayer.handler
+  events:
+    - http:
+        path: /player
+        method: POST
+        cors: true
+
+getPlayer:
+  handler: src/handlers/getPlayer.handler
+  events:
+    - http:
+        path: /player/{id}
+        method: GET
+        cors: true
+
+submitGuess:
+  handler: src/handlers/submitGuess.handler
+  events:
+    - http:
+        path: /guess
+        method: POST
+        cors: true
+
+resolveGuess:
+  handler: src/handlers/resolveGuess.handler
+  events:
+    # Dev-only: trigger resolution manually when running offline (no EventBridge)
+    - http:
+        path: /resolve-now
+        method: POST
+        cors: true

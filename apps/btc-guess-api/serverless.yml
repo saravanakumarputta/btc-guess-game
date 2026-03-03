@@ -1,0 +1,104 @@
+service: btc-guessing-game-api
+
+useDotenv: true
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  environment:
+    PLAYERS_TABLE: ${self:service}-players-${sls:stage}
+    GUESSES_TABLE: ${self:service}-guesses-${sls:stage}
+    RESOLVE_GUESS_LAMBDA_ARN: arn:aws:lambda:${aws:region}:${aws:accountId}:function:${self:service}-${sls:stage}-resolveGuess
+    SCHEDULER_ROLE_ARN: arn:aws:iam::${aws:accountId}:role/${self:service}-scheduler-role-${sls:stage}
+    SCHEDULER_GROUP: ${self:service}-${sls:stage}-group
+    COINGECKO_API_KEY: ${env:COINGECKO_API_KEY}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:Query
+            - dynamodb:Scan
+          Resource:
+            - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.PLAYERS_TABLE}
+            - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.GUESSES_TABLE}
+        - Effect: Allow
+          Action:
+            - scheduler:CreateSchedule
+            - scheduler:DeleteSchedule
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - iam:PassRole
+          Resource: arn:aws:iam::${aws:accountId}:role/${self:service}-scheduler-role-${sls:stage}
+
+functions: ${file(resources/functions.yml)}
+
+resources:
+  Resources:
+    PlayersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.PLAYERS_TABLE}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: playerId
+            AttributeType: "S"
+        KeySchema:
+          - AttributeName: playerId
+            KeyType: HASH
+
+    GuessesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.GUESSES_TABLE}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: playerId
+            AttributeType: "S"
+          - AttributeName: timestamp
+            AttributeType: "N"
+        KeySchema:
+          - AttributeName: playerId
+            KeyType: HASH
+          - AttributeName: timestamp
+            KeyType: RANGE
+
+    SchedulerRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: ${self:service}-scheduler-role-${sls:stage}
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: scheduler.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: InvokeResolveGuessLambda
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action: lambda:InvokeFunction
+                  Resource: arn:aws:lambda:${aws:region}:${aws:accountId}:function:${self:service}-${sls:stage}-resolveGuess
+
+    SchedulerGroup:
+      Type: AWS::Scheduler::ScheduleGroup
+      Properties:
+        Name: ${self:service}-${sls:stage}-group
+
+plugins:
+  - serverless-esbuild
+
+custom:
+  esbuild:
+    bundle: true
+    minify: false
+    sourcemap: true
+    target: node20
