@@ -1,4 +1,4 @@
-export const fetchBTCPrice = async (): Promise<number> => {
+export const fetchBTCPrice = async (): Promise<Record<string, number>> => {
   const apiKey = process.env.COINGECKO_API_KEY;
 
   if (!apiKey) {
@@ -13,6 +13,6 @@ export const fetchBTCPrice = async (): Promise<number> => {
     throw new Error(`Failed to fetch BTC price: ${response.statusText}`);
   }
 
-  const data = await response.json();
-  return data.bitcoin.usd as number;
+  const data = (await response.json()) as { bitcoin: { usd: number } };
+  return data.bitcoin;
 };
