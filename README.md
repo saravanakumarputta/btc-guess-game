@@ -213,6 +213,8 @@ pnpm dev
 
 The frontend will be available at `http://localhost:5173` and will connect to your deployed AWS backend.
 
+`Note: Once you Sign Up, please verify your account with the verification link in your provided email.`
+
 #### Frontend Deployment
 
 To build the frontend for production deployment:
